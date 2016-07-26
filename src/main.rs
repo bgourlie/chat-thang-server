@@ -1,9 +1,19 @@
+#![feature(custom_derive, plugin)]
+#![plugin(serde_macros)]
+
 #[macro_use]
 extern crate log;
 extern crate env_logger;
 extern crate ws;
+extern crate serde_json;
 
 use ws::listen;
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+struct Message {
+    name: String,
+    text: String,
+}
 
 fn main() {
     env_logger::init().unwrap();
@@ -12,13 +22,17 @@ fn main() {
     if let Err(error) = listen("127.0.0.1:2794", |out| {
 
         // The handler needs to take ownership of out, so we use move
-        move |msg| {
+        move |msg: ws::Message| {
 
-            // Handle messages received on this connection
-            info!("Server received: {}", msg);
-
-            // Use the out channel to send messages back
-            out.send(msg)
+            match msg {
+                ws::Message::Text(json) => {
+                    match serde_json::from_str::<Message>(&json) {
+                        Ok(deserialized) => out.send(serde_json::to_string(&deserialized).unwrap()),
+                        Err(err) => panic!("Deserialization failed: {:?}", err),
+                    }
+                }
+                ws::Message::Binary(_) => panic!("Not expecting binary data!"),
+            }
         }
 
     }) {

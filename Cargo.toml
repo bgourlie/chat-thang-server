@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["W. Brian Gourlie <bgourlie@gmail.com>"]
 
 [dependencies]
-ws = "0.5.1"
-log = "0.3.6"
-env_logger = "0.3.4"
+ws = "*"
+log = "*"
+env_logger = "*"
+serde = "*"
+serde_json = "*"
+serde_macros = "*"
