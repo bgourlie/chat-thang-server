@@ -15,6 +15,11 @@ struct Message {
     text: String,
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+struct Error {
+    message: String,
+}
+
 fn main() {
     env_logger::init().unwrap();
 
@@ -28,10 +33,18 @@ fn main() {
                 ws::Message::Text(json) => {
                     match serde_json::from_str::<Message>(&json) {
                         Ok(deserialized) => out.send(serde_json::to_string(&deserialized).unwrap()),
-                        Err(err) => panic!("Deserialization failed: {:?}", err),
+                        Err(err) => {
+                            let err_msg = format!("Deserialization failed: {:?}", err);
+                            error!("{}", err_msg);
+                            out.send(generate_error(err_msg))
+                        }
                     }
                 }
-                ws::Message::Binary(_) => panic!("Not expecting binary data!"),
+                ws::Message::Binary(_) => {
+                    let err_msg = "Not expecting binary data!".to_string();
+                    error!("{}", err_msg);
+                    out.send(generate_error(err_msg))
+                }
             }
         }
 
@@ -39,4 +52,9 @@ fn main() {
         // Inform the user of failure
         error!("Failed to create WebSocket due to {:?}", error);
     }
+}
+
+fn generate_error(message: String) -> String {
+    let err = Error { message: message };
+    serde_json::to_string(&err).unwrap()
 }
