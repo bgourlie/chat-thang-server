@@ -11,13 +11,9 @@ use ws::listen;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct Message {
+    msg_type: String,
     name: String,
     text: String,
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct Error {
-    message: String,
 }
 
 fn main() {
@@ -55,6 +51,10 @@ fn main() {
 }
 
 fn generate_error(message: String) -> String {
-    let err = Error { message: message };
+    let err = Message {
+        msg_type: "error".to_string(),
+        name: "error_reporter".to_string(),
+        text: message
+    };
     serde_json::to_string(&err).unwrap()
 }
