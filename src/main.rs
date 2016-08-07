@@ -7,7 +7,7 @@ extern crate env_logger;
 extern crate ws;
 extern crate serde_json;
 
-use ws::listen;
+use ws::{listen, Sender};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct Message {
@@ -21,7 +21,7 @@ fn main() {
     env_logger::init().unwrap();
 
     // Listen on an address and call the closure for each connection
-    if let Err(error) = listen("127.0.0.1:2794", |out| {
+    if let Err(error) = listen("127.0.0.1:2794", |out: Sender| {
 
         // The handler needs to take ownership of out, so we use move
         move |msg: ws::Message| {
@@ -29,7 +29,7 @@ fn main() {
             match msg {
                 ws::Message::Text(json) => {
                     match serde_json::from_str::<Message>(&json) {
-                        Ok(deserialized) => out.send(serde_json::to_string(&deserialized).unwrap()),
+                        Ok(deserialized) => out.broadcast(serde_json::to_string(&deserialized).unwrap()),
                         Err(err) => {
                             let err_msg = format!("Deserialization failed: {:?}", err);
                             error!("{}", err_msg);
