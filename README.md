@@ -25,10 +25,6 @@ Install [rustup](https://www.rustup.rs/). Be sure to `source` the cargo environm
     
 You should also add the above line to your `.bashrc`.
 
-You will need to install the rust nightly binaries and set it to the default toolchain:
-
-    $ rustup toolchain install nightly && rustup default nightly
-
 #### Download and run
 
 Clone the chat-thang-sources into a directory of your choosing:
