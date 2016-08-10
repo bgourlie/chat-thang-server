@@ -17,7 +17,7 @@ struct Message {
     msg_type: String,
     name: String,
     text: String,
-    time: Time
+    time: Time,
 }
 
 impl serde::Serialize for Message {
@@ -47,7 +47,7 @@ enum MessageField {
     MessageType,
     Name,
     Text,
-    Time
+    Time,
 }
 
 impl serde::Deserialize for MessageField {
@@ -84,18 +84,28 @@ impl serde::de::Visitor for MessageVisitor {
     fn visit_map<V>(&mut self, mut visitor: V) -> Result<Message, V::Error>
         where V: serde::de::MapVisitor
     {
-        let mut msg_type: Option<String> = None;
+        let mut msg_type = None;
         let mut name = None;
         let mut text = None;
         let mut time: Option<String> = None;
 
         loop {
             match try!(visitor.visit_key()) {
-                Some(MessageField::MessageType) => { msg_type = Some(try!(visitor.visit_value())); }
-                Some(MessageField::Name) => { name = Some(try!(visitor.visit_value())); }
-                Some(MessageField::Text) => { text = Some(try!(visitor.visit_value())); }
-                Some(MessageField::Time) => { time = Some(try!(visitor.visit_value())); }
-                None => { break; }
+                Some(MessageField::MessageType) => {
+                    msg_type = Some(try!(visitor.visit_value()));
+                }
+                Some(MessageField::Name) => {
+                    name = Some(try!(visitor.visit_value()));
+                }
+                Some(MessageField::Text) => {
+                    text = Some(try!(visitor.visit_value()));
+                }
+                Some(MessageField::Time) => {
+                    time = Some(try!(visitor.visit_value()));
+                }
+                None => {
+                    break;
+                }
             }
         }
 
@@ -121,12 +131,17 @@ impl serde::de::Visitor for MessageVisitor {
 
         let time_struct = match time::strptime(&*time, "%+") {
             Ok(time_struct) => time_struct,
-            Err(_) => panic!("shit!") // TODO: Handle gracefully
+            Err(_) => try!(Err(serde::de::Error::custom("Malformed time format"))),
         };
 
         try!(visitor.end());
 
-        Ok(Message { msg_type: msg_type, name: name, text: text, time: time_struct })
+        Ok(Message {
+            msg_type: msg_type,
+            name: name,
+            text: text,
+            time: time_struct,
+        })
     }
 }
 
@@ -169,7 +184,7 @@ fn main() {
                         }
                         Err(err) => {
                             let err_msg = format!("Deserialization failed: {:?}", err);
-                            error!("{}", err_msg);
+                            warn!("{}", err_msg);
                             out.send(generate_error(err_msg))
                         }
                     }
@@ -193,7 +208,7 @@ fn generate_error(message: String) -> String {
         msg_type: "error".to_string(),
         name: "error_reporter".to_string(),
         text: message,
-        time: time::now_utc()
+        time: time::now_utc(),
     };
     serde_json::to_string(&err).unwrap()
 }
