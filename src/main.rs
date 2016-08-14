@@ -5,7 +5,6 @@ extern crate ws;
 extern crate serde;
 extern crate serde_json;
 extern crate clap;
-extern crate time;
 extern crate chrono;
 
 mod message;
