@@ -12,7 +12,6 @@ mod message;
 use ws::{listen, Sender};
 use clap::{Arg, App};
 use message::Message;
-use chrono::UTC;
 
 
 fn main() {
@@ -55,14 +54,16 @@ fn main() {
                         Err(err) => {
                             let err_msg = format!("Deserialization failed: {:?}", err);
                             warn!("{}", err_msg);
-                            out.send(generate_error(err_msg))
+                            let msg = Message::with_error(err_msg);
+                            out.send(msg.to_string())
                         }
                     }
                 }
                 ws::Message::Binary(_) => {
                     let err_msg = "Not expecting binary data!".to_string();
                     error!("{}", err_msg);
-                    out.send(generate_error(err_msg))
+                    let msg = Message::with_error(err_msg);
+                    out.send(msg.to_string())
                 }
             }
         }
@@ -71,14 +72,4 @@ fn main() {
         // Inform the user of failure
         error!("Failed to create WebSocket due to {:?}", error);
     }
-}
-
-fn generate_error(message: String) -> String {
-    let err = Message {
-        msg_type: "error".to_string(),
-        name: "error_reporter".to_string(),
-        text: message,
-        time: UTC::now(),
-    };
-    serde_json::to_string(&err).unwrap()
 }
