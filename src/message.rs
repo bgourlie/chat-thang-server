@@ -1,5 +1,7 @@
 use chrono::{UTC, DateTime};
+use serde::{Serialize, Serializer};
 use serde;
+use serde_json;
 
 #[derive(Debug, PartialEq)]
 pub struct Message {
@@ -9,9 +11,29 @@ pub struct Message {
     pub time: DateTime<UTC>,
 }
 
-impl serde::Serialize for Message {
+impl Message {
+    pub fn with_error(message: String) -> Self {
+        Message {
+            msg_type: "error".to_string(),
+            name: "error_reporter".to_string(),
+            text: message,
+            time: UTC::now(),
+        }
+    }
+}
+
+impl ToString for Message {
+    fn to_string(&self) -> String {
+        // Not sure what could cause this to fail, but if it does, return an
+        // empty object instead of crashing.  This will cause a deserialization
+        // error on the client unless we handle this.
+        serde_json::to_string(&self).unwrap_or("{}".to_string())
+    }
+}
+
+impl Serialize for Message {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-        where S: serde::Serializer
+        where S: Serializer
     {
         let time_string = self.time.to_rfc3339();
         let mut state = try!(serializer.serialize_struct("Message", 4));
