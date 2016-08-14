@@ -1,23 +1,19 @@
-#![feature(custom_derive, plugin)]
-#![plugin(serde_macros)]
-
 #[macro_use]
 extern crate log;
 extern crate env_logger;
 extern crate ws;
+extern crate serde;
 extern crate serde_json;
 extern crate clap;
+extern crate chrono;
+
+mod message;
 
 use ws::{listen, Sender};
 use clap::{Arg, App};
+use message::Message;
+use chrono::UTC;
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct Message {
-    #[serde(rename="msgType")]
-    msg_type: String,
-    name: String,
-    text: String,
-}
 
 fn main() {
     let matches = App::new("chat-thang-server")
@@ -40,7 +36,7 @@ fn main() {
 
     let bind_addr = {
         let bind_ip = matches.value_of("bind_ip").unwrap_or("localhost");
-        let bind_port = matches.value_of("bind_port").unwrap_or("2794");
+        let bind_port = matches.value_of("bind_port").unwrap_or("8080");
         format!("{}:{}", bind_ip, bind_port)
     };
 
@@ -58,7 +54,7 @@ fn main() {
                         }
                         Err(err) => {
                             let err_msg = format!("Deserialization failed: {:?}", err);
-                            error!("{}", err_msg);
+                            warn!("{}", err_msg);
                             out.send(generate_error(err_msg))
                         }
                     }
@@ -82,6 +78,7 @@ fn generate_error(message: String) -> String {
         msg_type: "error".to_string(),
         name: "error_reporter".to_string(),
         text: message,
+        time: UTC::now(),
     };
     serde_json::to_string(&err).unwrap()
 }
