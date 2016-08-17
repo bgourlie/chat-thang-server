@@ -3,6 +3,8 @@ use serde::{Serialize, Serializer};
 use serde;
 use serde_json;
 
+const EMPTY_OBJECT: &'static str = "{}";
+
 #[derive(Debug, PartialEq)]
 pub struct Message {
     pub msg_type: String,
@@ -24,10 +26,18 @@ impl Message {
 
 impl ToString for Message {
     fn to_string(&self) -> String {
-        // Not sure what could cause this to fail, but if it does, return an
-        // empty object instead of crashing.  This will cause a deserialization
-        // error on the client unless we handle this.
-        serde_json::to_string(&self).unwrap_or("{}".to_string())
+        match serde_json::to_string(&self) {
+            Ok(json) => json,
+            Err(error) => {
+                // If for some reason serialization fails, return an empty object instead of
+                // crashing.
+                //
+                // The client should understand that an empty object represents an unexpected
+                // server-side error and handle it as it deems appropriate.
+                error!("Serialize error: {}", error);
+                EMPTY_OBJECT.to_string()
+            }
+        }
     }
 }
 
