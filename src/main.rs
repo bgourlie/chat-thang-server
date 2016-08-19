@@ -49,7 +49,7 @@ fn main() {
                 ws::Message::Text(json) => {
                     match serde_json::from_str::<Message>(&json) {
                         Ok(deserialized) => {
-                            out.broadcast(serde_json::to_string(&deserialized).unwrap())
+                            out.broadcast(deserialized.to_string())
                         }
                         Err(err) => {
                             let err_msg = format!("Deserialization failed: {:?}", err);
