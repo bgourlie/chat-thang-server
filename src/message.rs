@@ -17,7 +17,7 @@ impl Message {
     pub fn with_error(message: String) -> Self {
         Message {
             msg_type: "error".to_string(),
-            name: "error_reporter".to_string(),
+            name: "".to_string(),
             text: message,
             time: UTC::now(),
         }
