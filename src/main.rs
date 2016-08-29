@@ -6,70 +6,44 @@ extern crate serde;
 extern crate serde_json;
 extern crate clap;
 extern crate chrono;
+extern crate hyper;
 
 mod message;
+mod http_server;
+mod ws_server;
 
-use ws::{listen, Sender};
 use clap::{Arg, App};
-use message::Message;
 
+const MODE_HTTP: &'static str = "http";
+const MODE_WS: &'static str = "ws";
 
 fn main() {
     let matches = App::new("chat-thang-server")
         .version("0.1")
         .author("W. Brian Gourlie <bgourlie@gmail.com>")
         .about("A stupid chat thing")
-        .arg(Arg::with_name("bind_ip")
-            .short("i")
-            .long("ip")
-            .help("IP address to bind the server to")
+        .arg(Arg::with_name("bind")
+            .short("b")
+            .long("bind")
+            .help("The ip address and port to listen on")
             .takes_value(true))
-        .arg(Arg::with_name("bind_port")
-            .short("p")
-            .long("port")
-            .help("The port to bind the server to")
+        .arg(Arg::with_name("mode")
+            .short("m")
+            .long("mode")
+            .help("The server mode -- HTTP application server or WebSocket event server")
+            .possible_values(&[MODE_HTTP, MODE_WS])
             .takes_value(true))
         .get_matches();
 
     env_logger::init().unwrap();
 
-    let bind_addr = {
-        let bind_ip = matches.value_of("bind_ip").unwrap_or("localhost");
-        let bind_port = matches.value_of("bind_port").unwrap_or("8080");
-        format!("{}:{}", bind_ip, bind_port)
-    };
+    let bind_addr = matches.value_of("bind").unwrap_or("localhost:8080");
 
-    // Listen on an address and call the closure for each connection
-    if let Err(error) = listen(&*bind_addr, |out: Sender| {
-
-        // The handler needs to take ownership of out, so we use move
-        move |msg: ws::Message| {
-
-            match msg {
-                ws::Message::Text(json) => {
-                    match serde_json::from_str::<Message>(&json) {
-                        Ok(deserialized) => {
-                            out.broadcast(deserialized.to_string())
-                        }
-                        Err(err) => {
-                            let err_msg = format!("Deserialization failed: {:?}", err);
-                            warn!("{}", err_msg);
-                            let msg = Message::with_error(err_msg);
-                            out.send(msg.to_string())
-                        }
-                    }
-                }
-                ws::Message::Binary(_) => {
-                    let err_msg = "Not expecting binary data!".to_string();
-                    error!("{}", err_msg);
-                    let msg = Message::with_error(err_msg);
-                    out.send(msg.to_string())
-                }
-            }
-        }
-
-    }) {
-        // Inform the user of failure
-        error!("Failed to create WebSocket due to {:?}", error);
+    match matches.value_of("mode").unwrap() {
+        MODE_HTTP => http_server::listen(&*bind_addr),
+        MODE_WS => ws_server::listen(&*bind_addr),
+        _ => panic!("Invalid server mode")
     }
+
+    ws_server::listen(&*bind_addr);
 }
